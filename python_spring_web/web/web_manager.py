@@ -1,49 +1,33 @@
 """
     this class will be used to find the classes/methods that perform actions on the data 
-    recieved and returned via the web
+    recieved and returned via the web. It will also spin up the server and manage the
+    deployment of the server
 """
 
-import socket
+from codecs import StreamReader, StreamWriter
+import asyncio
+
 
 class WebManager:
-    
+
     @classmethod
-    def start_server(cls):
-        """
-            to start up our server we need to give host and port information. Ideally 
-            this would be customizable, but will make it static for now 
-        """
-        server_host = "127.0.0.1"
-        server_port = 8000
+    async def handle_request(cls, reader:StreamReader, writer:StreamWriter):
+        request:str = (await reader.read(1024)).decode()
+        # print(request) # for debugging
+        method, uri, http_version = request.split("\n")[0].split()
+        # print(method, uri, http_version) # for debugging
+        response = f'{http_version} 200 OK\n\n\f{WebManager.get_index()}'
+        writer.write(response.encode())
+        await writer.drain()
+        writer.close()
 
-        """
-            now we can create our socket
-        """
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_socket.bind((server_host, server_port))
-        server_socket.listen(1)
-        print(f"Listening at {server_host}:{server_port}")
-        try:
-            while True:
-                # wait for a connection from end user
-                client_connection, client_address = server_socket.accept()
+    @classmethod
+    async def start(cls, host:str = "127.0.0.1", port: int = 8000):
+        server = await asyncio.start_server(WebManager.handle_request, host, port)
+        async with server:
+            print("Listening at: http://localhost:8000")
+            await server.serve_forever()
 
-                # get the request
-                request = client_connection.recv(1024).decode()
-                # print(request) # debugging
-
-                request_data = WebManager.get_http_request_data(request)
-                # print(request_data) # debugging
-
-                # return response
-                response = f"HTTP/1.0 200 OK\n\n{WebManager.get_index()}"
-                client_connection.sendall(response.encode())
-
-                client_connection.close()
-        except KeyboardInterrupt:
-            server_socket.close()
-            print("Goodbye!")
 
     @classmethod
     def get_index(cls):
@@ -57,5 +41,4 @@ class WebManager:
         headers = request.split("\n")
         method, uri, version = headers[0].split()
         return (method, uri, version)
-
-
+    
