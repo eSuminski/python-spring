@@ -6,6 +6,7 @@ import platform
 import importlib
 import inspect
 import sys
+import pkgutil
 from typing import Type
 
 from python_spring_core.exceptions.manager_exceptions import ObjectCreationFailed
@@ -38,12 +39,18 @@ class ApplicationContext:
     # holds the actual objects and references to them
     managed_objects: dict = dict()
 
+    # holds the current list of possible spring python modules that "might" be part of the app
+    python_spring_modules: list = [
+        "WebManager"
+    ]
+
     @classmethod
     def start(cls):
         cls.find_modules_in_project()
         cls.find_classes_to_manage()
         cls.create_objects()
         cls.assign_dependencies()
+        cls.start_other_python_spring_managers()
 
 
     """
@@ -132,3 +139,12 @@ class ApplicationContext:
                     for key in cls.managed_objects.keys():
                         if key in str(param.annotation):
                             setattr(obj,param.name,cls.managed_objects[key])
+
+    """
+        Step 5: check for other Python Spring Modules
+    """
+    @classmethod
+    def start_other_python_spring_managers(cls):
+        for manager in cls.python_spring_modules:
+            if manager in cls.managed_objects.keys():
+                cls.managed_objects[manager].start_server()
