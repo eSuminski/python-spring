@@ -6,7 +6,6 @@ import platform
 import importlib
 import inspect
 import sys
-import pkgutil
 from typing import Type
 
 from python_spring_core.exceptions.manager_exceptions import ObjectCreationFailed
@@ -145,6 +144,5 @@ class ApplicationContext:
     """
     @classmethod
     def start_other_python_spring_managers(cls):
-        for manager in cls.python_spring_modules:
-            if manager in cls.managed_objects.keys():
-                cls.managed_objects[manager].start_server()
+        if "WebManager" in cls.python_spring_modules:
+            cls.managed_objects["WebManager"].start()
